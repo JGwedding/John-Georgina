@@ -1827,6 +1827,14 @@ body[dir="rtl"] .media-video span {
   line-height: 1.5;
 }
 
+.upload-error {
+  margin: 0;
+  color: var(--rose);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .gallery-upload a {
   flex: 0 0 auto;
   min-height: 44px;

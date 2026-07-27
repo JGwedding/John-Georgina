@@ -1,4 +1,5 @@
 const weddingDate = new Date("2026-09-25T19:00:00+02:00");
+const uploadOpenDate = new Date("2026-09-25T00:00:00");
 const params = new URLSearchParams(window.location.search);
 let guestName = params.get("guest") || params.get("name") || "";
 let guestParty = params.get("party") || "";
@@ -95,6 +96,7 @@ const translations = {
     playVideo: "Spela video",
     uploadPhotosBody: "Efter bröllopet kan du dela dina bilder med oss här.",
     uploadPhotos: "Ladda upp bilder",
+    uploadPhotosBlocked: "Bilduppladdning öppnar den 25 september 2026.",
     footerText: "25 september 2026 | Tensta Maria kyrka",
     heroPhotoAltOne: "John och Georgina vid vattnet i solnedgången",
     heroPhotoAltTwo: "John och Georgina framför vattnet",
@@ -198,6 +200,7 @@ const translations = {
     playVideo: "Play video",
     uploadPhotosBody: "After the wedding, you can share your photos with us here.",
     uploadPhotos: "Upload photos",
+    uploadPhotosBlocked: "Photo uploads open on September 25, 2026.",
     footerText: "September 25, 2026 | Tensta Maria Church",
     heroPhotoAltOne: "John and Georgina by the water at sunset",
     heroPhotoAltTwo: "John and Georgina by the water",
@@ -301,6 +304,7 @@ const translations = {
     playVideo: "تشغيل الفيديو",
     uploadPhotosBody: "بعد الزفاف يمكنكم مشاركة صوركم معنا هنا.",
     uploadPhotos: "رفع الصور",
+    uploadPhotosBlocked: "سيتم فتح رفع الصور في 25 سبتمبر 2026.",
     footerText: "25 سبتمبر 2026 | كنيسة تنستا ماريا",
     heroPhotoAltOne: "John وGeorgina بجانب الماء عند الغروب",
     heroPhotoAltTwo: "John وGeorgina بجانب الماء",
@@ -637,6 +641,21 @@ function applyLanguage(lang) {
   if (mediaModal.classList.contains("is-open")) {
     renderMedia(activeMediaIndex);
   }
+}
+
+function handleUploadClick(event) {
+  if (new Date() < uploadOpenDate) {
+    event.preventDefault();
+    const uploadError = document.querySelector("#uploadErrorMessage");
+    if (uploadError) {
+      uploadError.hidden = false;
+    }
+  }
+}
+
+const uploadLink = document.querySelector("#galleryUploadLink");
+if (uploadLink) {
+  uploadLink.addEventListener("click", handleUploadClick);
 }
 
 document.querySelectorAll(".lang-btn").forEach((button) => {
