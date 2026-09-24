@@ -24,7 +24,7 @@ For guided setup after step 2, run `python3 tools/connect-dropbox-gallery.py` in
 
 ## Behavior and limits
 
-- Scheduled every 15 minutes; GitHub can delay or drop scheduled runs. The open page checks the published manifest every minute, pausing while hidden or while the full-screen viewer is open. This is periodic automatic syncing, not instant live streaming.
+- Scheduled every 5 minutes; GitHub can delay or drop scheduled runs. The open page checks the published manifest every minute, pausing while hidden or while the full-screen viewer is open. This is periodic automatic syncing, not instant live streaming.
 - Every supported file in the configured folder is published without moderation. Add this information to the Dropbox request description too, so guests following its link directly can see it.
 - JPEG/JFIF, PNG, GIF, WebP, AVIF, MP4, WebM and MOV are included. HEIC and other unsupported extensions are skipped and logged. MOV and video codec playback depend on the visitor's browser; MP4 with H.264 is the most compatible choice. No transcoding is implemented.
 - Dropbox storage and shared-link bandwidth limits still apply. This is suitable for a small wedding gallery, not unlimited media hosting.
