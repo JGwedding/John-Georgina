@@ -1,0 +1,45 @@
+name: Publish site and guest gallery
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read the wedding upload folder
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+          DROPBOX_FOLDER_PATH: ${{ secrets.DROPBOX_FOLDER_PATH }}
+        run: python tools/sync-dropbox-gallery.py
+      - name: Prepare public site
+        run: |
+          mkdir _site
+          cp index.html script.js styles.css _site/
+          cp -R assets images _site/
+          mkdir _site/data
+          cp data/guest-gallery.json data/invite-map.sample.json _site/data/
+          if [ -f data/invite-map.json ]; then cp data/invite-map.json _site/data/; fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
+        id: deployment

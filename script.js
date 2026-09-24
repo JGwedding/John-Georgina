@@ -93,7 +93,7 @@ const translations = {
     galleryEyebrow: "Bilder och video",
     galleryTitle: "Några ögonblick från vägen hit",
     playVideo: "Spela video",
-    uploadPhotosBody: "Dela dina bilder med oss via Dropbox. Du behöver inget Dropbox-konto.",
+    uploadPhotosBody: "Dela bilder och filmer via Dropbox. Uppladdningar visas offentligt här efter nästa uppdatering. Inget Dropbox-konto behövs.",
     uploadPhotos: "Ladda upp bilder",
     footerText: "25 september 2026 | Tensta Maria kyrka",
     heroPhotoAltOne: "John och Georgina vid vattnet i solnedgången",
@@ -196,7 +196,7 @@ const translations = {
     galleryEyebrow: "Photos and video",
     galleryTitle: "A few moments from the road here",
     playVideo: "Play video",
-    uploadPhotosBody: "Share your photos with us via Dropbox. No Dropbox account needed.",
+    uploadPhotosBody: "Share photos and videos via Dropbox. Uploads appear publicly here after the next update. No Dropbox account needed.",
     uploadPhotos: "Upload photos",
     footerText: "September 25, 2026 | Tensta Maria Church",
     heroPhotoAltOne: "John and Georgina by the water at sunset",
@@ -299,7 +299,7 @@ const translations = {
     galleryEyebrow: "صور وفيديو",
     galleryTitle: "بعض اللحظات من الطريق إلى هنا",
     playVideo: "تشغيل الفيديو",
-    uploadPhotosBody: "شاركوا صوركم معنا عبر Dropbox. لا تحتاجون إلى حساب Dropbox.",
+    uploadPhotosBody: "شاركوا صوركم ومقاطع الفيديو عبر Dropbox. ستظهر المشاركات للجميع هنا بعد التحديث التالي. لا تحتاجون إلى حساب Dropbox.",
     uploadPhotos: "رفع الصور",
     footerText: "25 سبتمبر 2026 | كنيسة تنستا ماريا",
     heroPhotoAltOne: "John وGeorgina بجانب الماء عند الغروب",
@@ -776,18 +776,18 @@ function renderMedia(index) {
   activeMediaIndex = (index + galleryItems.length) % galleryItems.length;
   const item = galleryItems[activeMediaIndex];
 
+  const media = document.createElement(item.type === "video" ? "video" : "img");
+  media.src = item.src;
   if (item.type === "video") {
-    stage.innerHTML = `
-      <video controls autoplay playsinline poster="${item.poster || ""}">
-        <source src="${item.src}" type="video/mp4" />
-      </video>
-    `;
+    media.controls = true;
+    media.autoplay = true;
+    media.playsInline = true;
+    if (item.poster) media.poster = item.poster;
   } else {
-    stage.innerHTML = `<img src="${item.src}" alt="${escapeHtml(item.alt || "")}" />`;
+    media.alt = translations[activeLang][item.altKey] || item.alt || "";
   }
-
+  stage.replaceChildren(media);
   caption.textContent = getMediaCaption(item);
-  stage.querySelector("img")?.setAttribute("alt", translations[activeLang][item.altKey] || "");
   count.textContent = `${activeMediaIndex + 1} / ${galleryItems.length}`;
 }
 
@@ -858,3 +858,72 @@ updateCountdown();
 setInterval(updateCountdown, 1000);
 applyLanguage("sv");
 loadInvitePersonalization();
+
+// Guest media is published by the Dropbox sync. Keep existing wedding tiles intact.
+const originalGalleryLength = galleryItems.length;
+let guestGallerySignature = "";
+let guestGalleryLoading = false;
+async function refreshGuestGallery() {
+  if (guestGalleryLoading || document.hidden || mediaModal.classList.contains("is-open")) return;
+  guestGalleryLoading = true;
+  try {
+    const response = await fetch("data/guest-gallery.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("Gallery unavailable");
+    const manifest = await response.json();
+    if (!Array.isArray(manifest.items)) throw new Error("Invalid gallery");
+    const seen = new Set();
+    const items = manifest.items.filter((item) => {
+      if (!item || typeof item.id !== "string" || seen.has(item.id) ||
+          !["image", "video"].includes(item.type)) return false;
+      try {
+        const url = new URL(item.src);
+        if (url.protocol !== "https:" || !["www.dropbox.com", "dl.dropboxusercontent.com"].includes(url.hostname)) return false;
+      } catch { return false; }
+      seen.add(item.id);
+      return true;
+    });
+    const signature = JSON.stringify(items);
+    if (signature === guestGallerySignature) return;
+    const grid = document.querySelector("#mediaGrid");
+    const fragment = document.createDocumentFragment();
+    const caption = { sv: "Minne från våra gäster", en: "A memory from our guests", ar: "ذكرى من ضيوفنا" };
+    items.forEach((item, offset) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "media-tile guest-media";
+      button.dataset.media = String(originalGalleryLength + offset);
+      button.setAttribute("aria-label", caption[activeLang]);
+      const preview = document.createElement(item.type === "video" ? "video" : "img");
+      if (item.type === "video") {
+        preview.preload = "metadata";
+        preview.muted = true;
+        preview.playsInline = true;
+        preview.src = item.src + "#t=0.1";
+        const label = document.createElement("span");
+        label.className = "guest-video-label";
+        label.textContent = "▶";
+        button.append(label);
+      } else {
+        preview.src = item.src;
+        preview.alt = caption[activeLang];
+        preview.loading = "lazy";
+        preview.decoding = "async";
+      }
+      button.append(preview);
+      button.addEventListener("click", () => openMedia(Number(button.dataset.media)));
+      fragment.append(button);
+    });
+    grid.querySelectorAll(".guest-media").forEach((tile) => tile.remove());
+    galleryItems.splice(originalGalleryLength, galleryItems.length - originalGalleryLength,
+      ...items.map((item) => ({ ...item, caption, alt: caption[activeLang] })));
+    grid.insertBefore(fragment, grid.querySelector(".gallery-upload"));
+    guestGallerySignature = signature;
+  } catch (error) {
+    console.warn("Guest gallery could not refresh; keeping the current photos.");
+  } finally {
+    guestGalleryLoading = false;
+  }
+}
+refreshGuestGallery();
+setInterval(refreshGuestGallery, 60000);
+document.addEventListener("visibilitychange", refreshGuestGallery);
